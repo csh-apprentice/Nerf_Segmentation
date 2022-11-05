@@ -10,6 +10,7 @@ from functools import reduce
 from tqdm import tqdm
 from scipy.spatial.transform import Rotation
 import numpy as np
+import time
 
 _C = utils._get_c_extension()
 
@@ -164,6 +165,31 @@ class Camera:
             torch.arange(self.height, dtype=torch.float64, device=self.c2w.device) + 0.5,
             torch.arange(self.width, dtype=torch.float64, device=self.c2w.device) + 0.5,
         )
+        xx = (xx - self.cx_val) / self.fx_val
+        yy = (yy - self.cy_val) / self.fy_val
+        zz = torch.ones_like(xx)
+        dirs = torch.stack((xx, yy, zz), dim=-1)   # OpenCV
+        del xx, yy, zz
+        dirs /= torch.norm(dirs, dim=-1, keepdim=True)
+        dirs = dirs.reshape(-1, 3, 1)
+        dirs = (self.c2w[None, :3, :3].double() @ dirs)[..., 0]
+        dirs = dirs.reshape(-1, 3).float()
+
+        if self.ndc_coeffs[0] > 0.0:
+            origins, dirs = utils.convert_to_ndc(
+                    origins,
+                    dirs,
+                    self.ndc_coeffs)
+            dirs /= torch.norm(dirs, dim=-1, keepdim=True)
+        return Rays(origins, dirs)
+    
+    def gen_one_ray(self,device,xcor,ycor):
+        """
+        Generate one ray, (xcor,ycor) is the coordinate user choose on the screen
+        :return: (origins (1, 3), dirs (1, 3))
+        """
+        origins = self.c2w[None, :3, 3].expand(1, -1).contiguous()
+        yy, xx = torch.tensor([[ycor]],device=device).double(),torch.tensor([[xcor]],device=device).double()
         xx = (xx - self.cx_val) / self.fx_val
         yy = (yy - self.cy_val) / self.fy_val
         zz = torch.ones_like(xx)
@@ -665,6 +691,11 @@ class SparseGrid(nn.Module):
         B = dirs.size(0)
         assert origins.size(0) == B
         gsz = self._grid_size()
+       
+        
+        
+        #scale_cu=self._scaling.to(device=dirs.device)
+        
         dirs = dirs * (self._scaling * gsz).to(device=dirs.device)
         delta_scale = 1.0 / dirs.norm(dim=1)
         dirs *= delta_scale.unsqueeze(-1)
@@ -679,6 +710,17 @@ class SparseGrid(nn.Module):
 
         gsz = self._grid_size()
         gsz_cu = gsz.to(device=dirs.device)
+        
+        
+        gsz=gsz.to(torch.long)
+        #gsz_cu = gsz.to(device=dirs.device)
+        my_device=str(dirs.device)
+       
+        #print(my_device)
+        
+        
+        if my_device=='cuda:0':
+            gsz=gsz.to(my_device)
         t1 = (-0.5 - origins) * invdirs
         t2 = (gsz_cu - 0.5 - origins) * invdirs
 
@@ -710,7 +752,11 @@ class SparseGrid(nn.Module):
         sh_mult = sh_mult[mask]
         tmax = tmax[mask]
 
+        one_iter_time=-1
         while good_indices.numel() > 0:
+            
+            start_time=time.time()
+            
             pos = origins + t[:, None] * dirs
             pos = pos.clamp_min_(0.0)
             pos[:, 0] = torch.clamp_max(pos[:, 0], gsz[0] - 1)
@@ -792,6 +838,10 @@ class SparseGrid(nn.Module):
             t = t[mask]
             sh_mult = sh_mult[mask]
             tmax = tmax[mask]
+            end_time=time.time()
+            if one_iter_time<0:
+                one_iter_time=end_time-start_time
+                print("One itertion costs ",one_iter_time)
 
         if self.use_background:
             # Render the MSI background model
@@ -907,6 +957,18 @@ class SparseGrid(nn.Module):
 
         gsz = self._grid_size()
         gsz_cu = gsz.to(device=dirs.device)
+        
+        gsz=gsz.to(torch.long)
+        gsz_cu = gsz.to(device=dirs.device)
+        my_device=str(dirs.device)
+       
+        #print(my_device)
+        
+        
+        if my_device=='cuda:0':
+            gsz=gsz.to(my_device)
+        
+        
         t1 = (-0.5 - origins) * invdirs
         t2 = (gsz_cu - 0.5 - origins) * invdirs
 
@@ -937,9 +999,14 @@ class SparseGrid(nn.Module):
         t = t[mask]
         sh_mult = sh_mult[mask]
         tmax = tmax[mask]
+        
+        #iter=0
+        max_time=0
 
 
         while good_indices.numel() > 0:
+            #iter=iter+1
+            starttime=time.time()
             pos = origins + t[:, None] * dirs
             pos = pos.clamp_min_(0.0)
             pos[:, 0] = torch.clamp_max(pos[:, 0], gsz[0] - 1)
@@ -1024,6 +1091,9 @@ class SparseGrid(nn.Module):
             t = t[mask]
             sh_mult = sh_mult[mask]
             tmax = tmax[mask]
+            endtime=time.time()
+            if endtime-starttime>max_time:
+                max_time=endtime-starttime
 
         # Add background color
         if self.opt.background_brightness:
@@ -1031,6 +1101,8 @@ class SparseGrid(nn.Module):
                (1.0 - total_alpha).unsqueeze(-1)
                 * self.opt.background_brightness
             )
+        #print("Number of iteration time in origin is",iter)
+        print("Max time in one iteration in origin is",max_time)
         return out_rgb
     
     def find_voxel(self, rays: Rays,return_raylen: bool=False):
@@ -1043,6 +1115,10 @@ class SparseGrid(nn.Module):
         dirs = rays.dirs / torch.norm(rays.dirs, dim=-1, keepdim=True)
         viewdirs = dirs
         B = dirs.size(0)
+        #print("the size of the dirs is",B)
+        #print(dirs)
+        #print("the size of the origins is",origins.size(0))
+        #print(origins)
         assert origins.size(0) == B
         gsz = self._grid_size()
         dirs = dirs * (self._scaling * gsz).to(device=dirs.device)
@@ -1058,9 +1134,23 @@ class SparseGrid(nn.Module):
         invdirs = 1.0 / dirs
 
         gsz = self._grid_size()
+        
+        gsz=gsz.to(torch.long)
         gsz_cu = gsz.to(device=dirs.device)
+        my_device=str(dirs.device)
+       
+        #print(my_device)
+        
+        
+        if my_device=='cuda:0':
+            gsz=gsz.to(my_device)
+            
+        #print(dirs.device)
+        #print(gsz_cu.device)
+        #print(gsz.device)
+        
         t1 = (-0.5 - origins) * invdirs
-        t2 = (gsz_cu - 0.5 - origins) * invdirs
+        t2 = (gsz - 0.5 - origins) * invdirs
 
         t = torch.min(t1, t2)
         t[dirs == 0] = -1e9
@@ -1094,11 +1184,15 @@ class SparseGrid(nn.Module):
         # set to be the origin voxel link
         pos = origins + t[:, None] * dirs
         pos = pos.clamp_min_(0.0)
+        
+        #print(gsz.dtype)  #float32
+        #print(pos.dtype)
         pos[:, 0] = torch.clamp_max(pos[:, 0], gsz[0] - 1)
         pos[:, 1] = torch.clamp_max(pos[:, 1], gsz[1] - 1)
         pos[:, 2] = torch.clamp_max(pos[:, 2], gsz[2] - 1)
 
         l = pos.to(torch.long)
+        print("debug here!")
         l.clamp_min_(0)
         l[:, 0] = torch.clamp_max(l[:, 0], gsz[0] - 2)
         l[:, 1] = torch.clamp_max(l[:, 1], gsz[1] - 2)
@@ -1108,12 +1202,17 @@ class SparseGrid(nn.Module):
         # BEGIN CRAZY TRILERP
         lx, ly, lz = l.unbind(-1)
         voxel_link = self.links[lx, ly, lz]
+        space_link=[lx,ly,lz]
         max_rgb=-1
         
-        
+        iter=0
+        time_max=0
         
         
         while good_indices.numel() > 0:
+            
+            iter=iter+1
+            starttime=time.time()
             pos = origins + t[:, None] * dirs
             pos = pos.clamp_min_(0.0)
             pos[:, 0] = torch.clamp_max(pos[:, 0], gsz[0] - 1)
@@ -1126,6 +1225,8 @@ class SparseGrid(nn.Module):
             l[:, 1] = torch.clamp_max(l[:, 1], gsz[1] - 2)
             l[:, 2] = torch.clamp_max(l[:, 2], gsz[2] - 2)
             pos -= l
+            
+            
 
             # BEGIN CRAZY TRILERP
             lx, ly, lz = l.unbind(-1)
@@ -1193,6 +1294,7 @@ class SparseGrid(nn.Module):
             # color contribution voting
             if rgb_sum>max_rgb:
                 voxel_link=links000
+                space_link=[lx,ly,lz]
             
 
             out_rgb[good_indices] += rgb
@@ -1205,14 +1307,15 @@ class SparseGrid(nn.Module):
             t = t[mask]
             sh_mult = sh_mult[mask]
             tmax = tmax[mask]
+            endtime=time.time()
+            if endtime-starttime>time_max:
+                time_max=endtime-starttime
+            
 
-        # Add background color
-        if self.opt.background_brightness:
-            out_rgb += (
-               (1.0 - total_alpha).unsqueeze(-1)
-                * self.opt.background_brightness
-            )
-        return voxel_link
+        print("One iteration in find voxel cost ",time_max)
+        print("Numer of iteration times in find voxel is",iter)
+        return voxel_link,space_link
+    
 
     def volume_render(
         self, rays: Rays, use_kernel: bool = True, randomize: bool = False,
@@ -1337,6 +1440,7 @@ class SparseGrid(nn.Module):
         :return: (H, W, 3), predicted RGB image
         """
         imrend_fn_name = f"volume_render_{self.opt.backend}_image"
+        
         if self.basis_type != BASIS_TYPE_MLP and imrend_fn_name in _C.__dict__ and not torch.is_grad_enabled() and not return_raylen:
             # Use the fast image render kernel if available
             cu_fn = _C.__dict__[imrend_fn_name]
@@ -1358,6 +1462,38 @@ class SparseGrid(nn.Module):
 
             all_rgb_out = torch.cat(all_rgb_out, dim=0)
             return all_rgb_out.view(camera.height, camera.width, -1)
+        
+        
+    def volume_render_image_test(
+        self, camera: Camera, use_kernel: bool = True, randomize: bool = False,
+        batch_size : int = 5000,
+        return_raylen: bool=False
+    ):
+        """
+        Standard volume rendering (entire image version).
+        See grid.opt.* (RenderOptions) for configs.
+
+        :param camera: Camera
+        :param use_kernel: bool, if false uses pure PyTorch version even if on CUDA.
+        :param randomize: bool, whether to enable randomness
+        :return: (H, W, 3), predicted RGB image
+        """
+        imrend_fn_name = f"volume_render_{self.opt.backend}_image"
+        
+        
+    
+        # Manually generate rays for now
+        rays = camera.gen_rays()
+        all_rgb_out = []
+        for batch_start in range(0, camera.height * camera.width, batch_size):
+            rgb_out_part = self.volume_render(rays[batch_start:batch_start+batch_size],
+                                                use_kernel=use_kernel,
+                                                randomize=randomize,
+                                                return_raylen=return_raylen)
+            all_rgb_out.append(rgb_out_part)
+
+        all_rgb_out = torch.cat(all_rgb_out, dim=0)
+        return all_rgb_out.view(camera.height, camera.width, -1)
 
     def volume_render_depth(self, rays: Rays, sigma_thresh: Optional[float] = None):
         """
