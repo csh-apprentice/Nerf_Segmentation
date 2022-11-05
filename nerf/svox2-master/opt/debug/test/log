@@ -1,0 +1,24 @@
+Defaulting to extended NSVF dataset
+LOAD NSVF DATA /data/shihan/nerf/dataset/data/img_desk split train
+  0%|          | 0/106 [00:00<?, ?it/s]  5%|▍         | 5/106 [00:00<00:02, 41.25it/s]  9%|▉         | 10/106 [00:00<00:02, 44.81it/s] 14%|█▍        | 15/106 [00:00<00:01, 46.29it/s] 19%|█▉        | 20/106 [00:00<00:01, 46.61it/s] 24%|██▎       | 25/106 [00:00<00:01, 47.07it/s] 28%|██▊       | 30/106 [00:00<00:01, 47.37it/s] 34%|███▍      | 36/106 [00:00<00:01, 48.64it/s] 40%|███▉      | 42/106 [00:00<00:01, 49.65it/s] 44%|████▍     | 47/106 [00:00<00:01, 49.62it/s] 49%|████▉     | 52/106 [00:01<00:01, 48.74it/s] 54%|█████▍    | 57/106 [00:01<00:01, 47.91it/s] 58%|█████▊    | 62/106 [00:01<00:00, 47.31it/s] 63%|██████▎   | 67/106 [00:01<00:00, 46.95it/s] 68%|██████▊   | 72/106 [00:01<00:00, 46.69it/s] 73%|███████▎  | 77/106 [00:01<00:00, 46.57it/s] 77%|███████▋  | 82/106 [00:01<00:00, 46.42it/s] 82%|████████▏ | 87/106 [00:01<00:00, 45.60it/s] 87%|████████▋ | 92/106 [00:01<00:00, 45.39it/s] 92%|█████████▏| 97/106 [00:02<00:00, 46.50it/s] 96%|█████████▌| 102/106 [00:02<00:00, 47.46it/s]100%|██████████| 106/106 [00:02<00:00, 47.24it/s]
+NORMALIZE BY? camera
+scene_scale 0.29775255445508275
+ intrinsics (loaded reso) Intrin(fx=952.6941086302014, fy=952.6941086302014, cx=640.0, cy=360.0)
+ Generating rays, scaling factor 1
+/data/shihan/anaconda3/envs/plenoxel_v2/lib/python3.8/site-packages/torch/functional.py:445: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at  /opt/conda/conda-bld/pytorch_1634272128894/work/aten/src/ATen/native/TensorShape.cpp:2157.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+Defaulting to extended NSVF dataset
+LOAD NSVF DATA /data/shihan/nerf/dataset/data/img_desk split test
+  0%|          | 0/8 [00:00<?, ?it/s] 62%|██████▎   | 5/8 [00:00<00:00, 48.98it/s]100%|██████████| 8/8 [00:00<00:00, 49.22it/s]
+NORMALIZE BY? camera
+scene_scale 0.29775255445508275
+ intrinsics (loaded reso) Intrin(fx=952.6941086302014, fy=952.6941086302014, cx=640.0, cy=360.0)
+  0%|          | 0/8 [00:00<?, ?it/s]img id is 0
+int16
+(720, 1280, 3)
+qt.qpa.xcb: could not connect to display 
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/data/shihan/anaconda3/envs/plenoxel_v2/lib/python3.8/site-packages/cv2/qt/plugins" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: xcb.
+

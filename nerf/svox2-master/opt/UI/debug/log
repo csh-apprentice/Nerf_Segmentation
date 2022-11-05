@@ -1,0 +1,15 @@
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /data/shihan/anaconda3/envs/plenoxel_v2/lib/python3.8/site-packages/lpips/weights/v0.1/vgg.pth
+Defaulting to extended NSVF dataset
+LOAD NSVF DATA /data/shihan/nerf/dataset/data/img_desk split train
+  0%|          | 0/106 [00:00<?, ?it/s]  2%|▏         | 2/106 [00:00<00:05, 19.41it/s]  7%|▋         | 7/106 [00:00<00:02, 34.95it/s] 11%|█▏        | 12/106 [00:00<00:02, 39.68it/s] 16%|█▌        | 17/106 [00:00<00:02, 43.02it/s] 21%|██        | 22/106 [00:00<00:01, 44.52it/s] 25%|██▌       | 27/106 [00:00<00:01, 45.13it/s] 30%|███       | 32/106 [00:00<00:01, 45.08it/s] 35%|███▍      | 37/106 [00:00<00:01, 44.69it/s] 40%|███▉      | 42/106 [00:00<00:01, 44.60it/s] 44%|████▍     | 47/106 [00:01<00:01, 44.96it/s] 49%|████▉     | 52/106 [00:01<00:01, 45.55it/s] 54%|█████▍    | 57/106 [00:01<00:01, 45.36it/s] 58%|█████▊    | 62/106 [00:01<00:00, 44.57it/s] 63%|██████▎   | 67/106 [00:01<00:00, 45.37it/s] 68%|██████▊   | 72/106 [00:01<00:00, 45.79it/s] 73%|███████▎  | 77/106 [00:01<00:00, 46.46it/s] 77%|███████▋  | 82/106 [00:01<00:00, 46.42it/s] 82%|████████▏ | 87/106 [00:01<00:00, 46.74it/s] 87%|████████▋ | 92/106 [00:02<00:00, 45.47it/s] 92%|█████████▏| 97/106 [00:02<00:00, 44.74it/s] 96%|█████████▌| 102/106 [00:02<00:00, 44.22it/s]100%|██████████| 106/106 [00:02<00:00, 44.25it/s]
+NORMALIZE BY? camera
+scene_scale 0.3142943630359207
+ intrinsics (loaded reso) Intrin(fx=952.6941086302014, fy=952.6941086302014, cx=640.0, cy=360.0)
+ Generating rays, scaling factor 1
+/data/shihan/anaconda3/envs/plenoxel_v2/lib/python3.8/site-packages/torch/functional.py:445: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at  /opt/conda/conda-bld/pytorch_1634272128894/work/aten/src/ATen/native/TensorShape.cpp:2157.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+Writing to /data/shihan/nerf/svox2-master/opt/ckpt/desk_test_big/test_renders
+Will write out all frames as PNG (this take most of the time)
+  0%|          | 0/1 [00:00<?, ?it/s]/data/shihan/anaconda3/envs/plenoxel_v2/lib/python3.8/site-packages/svox2/svox2.py:1341: UserWarning: Using slow volume rendering, should only be used for debugging
+  warn("Using slow volume rendering, should only be used for debugging")
